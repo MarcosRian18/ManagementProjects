@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Enums\TaskStatus;
 
 class TaskModel extends Model
 {
@@ -18,13 +19,14 @@ class TaskModel extends Model
         return $this->belongsTo(ProjetoModel::class);
     }
 
-    public function users() : BelongsToMany {
-        return $this->belongsToMany(User::class, 'task_user')->withTimestamps();
-    }
+    public function users(): BelongsToMany
+{
+    return $this->belongsToMany(User::class, 'task_user', 'task_id', 'user_id')->withTimestamps();
+}
 
     public static function getStatusOptions(): array
     {
-        return ['pendente', 'em progresso', 'concluída'];
+        return TaskStatus::getStatusOptions();
     }
 
     public function setStatusAttribute($value)

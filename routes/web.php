@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjetoController;
 use App\Http\Controllers\TasksController;
 use App\Http\Controllers\UserController;
+use App\Models\ProjetoModel;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -32,16 +33,20 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+// Rotas de Usuários
 Route::middleware(['auth'])->group(function () {
-    Route::get('/users', [UserController::class, 'index'])->middleware('auth');
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
+    // Rotas de Projetos
     Route::get('/projetos', [ProjetoController::class, 'index'])->name('projetos.index');
     Route::get('/projetos/create', [ProjetoController::class, 'create'])->name('projetos.create');
     Route::post('/projetos', [ProjetoController::class, 'store'])->name('projetos.store');
@@ -49,7 +54,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/projetos/{projeto}/edit', [ProjetoController::class, 'edit'])->name('projetos.edit');
     Route::put('/projetos/{projeto}', [ProjetoController::class, 'update'])->name('projetos.update');
     Route::delete('/projetos/{projeto}', [ProjetoController::class, 'destroy'])->name('projetos.destroy');
-
+    Route::get('/projetos/{id}/tasks', [TasksController::class, 'index']);
+    
     // Rotas de Tarefas
     Route::get('/tasks', [TasksController::class, 'index'])->name('tasks.index');
     Route::post('/tasks', [TasksController::class, 'store'])->name('tasks.store');
@@ -59,12 +65,9 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/tasks/{tarefa}', [TasksController::class, 'destroy'])->name('tasks.destroy');
 });
 
+// Rotas adicionais de tarefas
 Route::post('/tasks/{tarefa}/add-user', [TasksController::class, 'addUser'])->name('tasks.addUser');
 Route::put('/tasks/{id}/assign', [TasksController::class, 'assignUser']);
 Route::get('/tasks/{task}/users', [TasksController::class, 'getTaskUsers']);
-
-
-
-
 
 require __DIR__.'/auth.php';

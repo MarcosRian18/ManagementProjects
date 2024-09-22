@@ -4,40 +4,50 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 
 export default function Projetos({ auth }) {
-    const { tasks: initialTasks, projects: initialProjects } = usePage().props;
+    const { tasks: initialTasks = [], projects: initialProjects = [] } =
+        usePage().props;
     const [showForm, setShowForm] = useState(false);
-    const [showUserAssignModal, setShowUserAssignModal] = useState(false);
-    const [tasks, setTasks] = useState(initialTasks || []);
-    const [projects, setProjects] = useState(initialProjects || []);
+    const [tasks, setTasks] = useState(initialTasks);
+    const [projects, setProjects] = useState(initialProjects);
     const [submitError, setSubmitError] = useState(null);
     const [submitSuccess, setSubmitSuccess] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentTaskId, setCurrentTaskId] = useState(null);
-    const [currentTask, setCurrentTask] = useState(null);  
+    const [loading, setLoading] = useState(true);
     const [users, setUsers] = useState([]);
-    const [selectedUserId, setSelectedUserId] = useState(null);  
-    const { data, setData, post, errors } = useForm({
-        name: "",
-        description: "",
+
+    const { data, setData, post, put, reset, errors } = useForm({
+        nome: "",
+        descricao: "",
         status: "",
-        project: "",
+        projeto_id: "",
+        user_ids: [],
     });
 
-    
-
-     
     useEffect(() => {
-        axios
-            .get("/users")
-            .then((response) => setUsers(response.data))
-            .catch((error) => console.error("Erro ao buscar usuários:", error));
+        setLoading(true);
+        fetch("/api/projetos/list")
+            .then((response) => response.json())
+            .then((data) => {
+                setProjects(data);
+                setLoading(false);
+            })
+            .catch((error) => {
+                console.error("Erro ao consumir a API:", error);
+                setLoading(false);
+            });
     }, []);
 
     useEffect(() => {
-        fetch("/api/projetos/list")
-            .then((response) => response.json())
-            .then((data) => setProjects(data))
-            .catch((error) => console.error("Erro ao consumir a API:", error));
+        axios
+            .get("/users")
+            .then((response) => {
+                setUsers(response.data);
+                console.log(response.data);
+            })
+            .catch((error) => {
+                console.log("Erro ao buscar os usuários: ", error);
+            });
     }, []);
 
     const handleSubmit = (e) => {
@@ -46,9 +56,8 @@ export default function Projetos({ auth }) {
         setSubmitSuccess(false);
 
         if (isEditing && currentTaskId) {
-            axios
-                .put(route("tasks.update", currentTaskId), data)
-                .then(() => {
+            put(route("tasks.update", currentTaskId), {
+                onSuccess: () => {
                     setTasks(
                         tasks.map((task) =>
                             task.id === currentTaskId
@@ -56,26 +65,29 @@ export default function Projetos({ auth }) {
                                 : task
                         )
                     );
-                    setShowForm(false);
-                    setSubmitSuccess(true);
-                    resetForm();  
-                })
-                .catch(() => {
-                    setSubmitError("Erro ao atualizar tarefa.");
-                });
-        } else {
-            post(route("tasks.store", { projeto: data.project }), {
-                onSuccess: (response) => {
-                    setTasks([...tasks, response.data]);
-                    setShowForm(false);
-                    setSubmitSuccess(true);
-                    resetForm();  
+                    resetForm();
                 },
-                onError: (error) => setSubmitError("Erro ao cadastrar tarefa."),
+                onError: () => {
+                    setSubmitError("Erro ao atualizar tarefa.");
+                },
+            });
+        } else {
+            post(route("tasks.store"), {
+                onSuccess: (response) => {
+                    setTasks([...tasks, response.props.task]);
+                    resetForm();
+                },
+                onError: () => setSubmitError("Erro ao cadastrar tarefa."),
             });
         }
+    };
 
-        window.location.reload();
+    const resetForm = () => {
+        reset();
+        setShowForm(false);
+        setIsEditing(false);
+        setCurrentTaskId(null);
+        setSubmitSuccess(true);
     };
 
     const handleEdit = (task) => {
@@ -86,8 +98,9 @@ export default function Projetos({ auth }) {
             descricao: task.descricao,
             status: task.status,
             projeto_id: task.projeto ? task.projeto.id : "",
+            user_ids: task.users ? task.users.map((user) => user.id) : [], 
         });
-        setShowForm(true);  
+        setShowForm(true);
     };
 
     const handleDelete = (id) => {
@@ -97,29 +110,15 @@ export default function Projetos({ auth }) {
                 .then(() => {
                     setTasks(tasks.filter((task) => task.id !== id));
                 })
-                .catch(() => {
-                    console.error("Erro ao excluir tarefa.");
+                .catch((error) => {
+                    console.error("Erro ao excluir a tarefa:", error);
                 });
         }
     };
 
-    const assignUserToTask = () => {
-        console.log("Atribuir usuário à tarefa", currentTaskId, selectedUserId);
-        if (!selectedUserId) return;  
-    
-        axios
-            .put(`/tasks/${currentTaskId}/assign`, { user_id: selectedUserId }) 
-            .then(() => {
-                const updatedTasks = tasks.map((task) =>
-                    task.id === currentTaskId
-                        ? { ...task, assigned_user_id: selectedUserId }
-                        : task
-                );
-                setTasks(updatedTasks);
-                setShowUserAssignModal(false);  
-            })
-            .catch((error) => console.error("Erro ao atribuir usuário:", error));
-    };
+    if (loading) {
+        return <div>Carregando...</div>;
+    }
 
     return (
         <AuthenticatedLayout user={auth.user}>
@@ -167,6 +166,21 @@ export default function Projetos({ auth }) {
                                             ? task.projeto.nome
                                             : "Sem projeto"}
                                     </p>
+
+                                    
+                                    <p>Usuários cadastrados:</p>
+                                    {task.users && task.users.length > 0 ? (
+                                        <ul className="list-disc pl-5">
+                                            {task.users.map((user) => (
+                                                <li key={user.id}>
+                                                    {user.name}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p>Nenhum usuário cadastrado</p>
+                                    )}
+
                                     <div className="mt-6 flex justify-around">
                                         <button
                                             onClick={() => handleEdit(task)}
@@ -174,6 +188,7 @@ export default function Projetos({ auth }) {
                                         >
                                             Editar
                                         </button>
+
                                         <button
                                             onClick={() =>
                                                 handleDelete(task.id)
@@ -182,14 +197,6 @@ export default function Projetos({ auth }) {
                                         >
                                             Excluir
                                         </button>
-                                        <button
-                                            onClick={() =>
-                                                handleAssignUser(task.id)
-                                            }
-                                            className="bg-green-500 text-white py-1 px-3 rounded"
-                                        >
-                                            Adicionar Usuário
-                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -197,44 +204,6 @@ export default function Projetos({ auth }) {
                     </div>
                 </div>
             </div>
-
-            {showUserAssignModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
-                    <div className=" bg-white p-8 rounded shadow-lg w-96">
-                        <h2 className="text-xl font-bold mb-4">
-                            Atribuir Usuário à Tarefa
-                        </h2>
-                        <select
-                            className="w-full mb-4 border border-gray-300 p-2 rounded"
-                            value={selectedUserId}
-                            onChange={(e) =>
-                                setSelectedUserId(e.target.value)
-                            }
-                        >
-                            <option value="">Selecione um usuário</option>
-                            {users.map((user) => (
-                                <option key={user.id} value={user.id}>
-                                    {user.name}
-                                </option>
-                            ))}
-                        </select>
-                        <div className="flex justify-end">
-                            <button
-                                onClick={() => setShowUserAssignModal(false)}
-                                className="bg-gray-500 text-white py-2 px-4 rounded mr-2"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={assignUserToTask}
-                                className="bg-blue-500 text-white py-2 px-4 rounded"
-                            >
-                                Atribuir
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {showForm && (
                 <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
@@ -279,7 +248,10 @@ export default function Projetos({ auth }) {
                             >
                                 <option value="">Selecione o status</option>
                                 <option value="pendente">Pendente</option>
-                                <option value="concluida">Concluída</option>
+                                <option value="em progresso">
+                                    Em progresso
+                                </option>
+                                <option value="concluída">Concluída</option>
                             </select>
                             {errors.status && (
                                 <div className="text-red-500 mb-2">
@@ -305,8 +277,37 @@ export default function Projetos({ auth }) {
                                     {errors.projeto_id}
                                 </div>
                             )}
-                            <div className="flex justify-end">
+
+                           
+                            <select
+                                multiple
+                                className="w-full mb-4 border border-gray-300 p-2 rounded"
+                                value={data.user_ids}
+                                onChange={(e) =>
+                                    setData(
+                                        "user_ids",
+                                        [...e.target.selectedOptions].map(
+                                            (option) => option.value
+                                        )
+                                    )
+                                }
+                            >
+                                <option value="">Selecione os usuários</option>
+                                {users.map((user) => (
+                                    <option key={user.id} value={user.id}>
+                                        {user.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.user_ids && (
+                                <div className="text-red-500 mb-2">
+                                    {errors.user_ids}
+                                </div>
+                            )}
+
+                            <div className="flex justify-end mt-4">
                                 <button
+                                    type="button"
                                     onClick={() => setShowForm(false)}
                                     className="bg-gray-500 text-white py-2 px-4 rounded mr-2"
                                 >
@@ -316,7 +317,7 @@ export default function Projetos({ auth }) {
                                     type="submit"
                                     className="bg-blue-500 text-white py-2 px-4 rounded"
                                 >
-                                    {isEditing ? "Salvar" : "Criar"}
+                                    {isEditing ? "Atualizar" : "Salvar"}
                                 </button>
                             </div>
                         </form>

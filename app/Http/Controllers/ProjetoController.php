@@ -40,7 +40,6 @@ class ProjetoController extends Controller
             'nome' => 'required|string|max:255',
             'descricao' => 'nullable|string',
             'dt_entrega' => 'date|nullable',
-            'qtd_task' => 'string',
         ]);
 
         ProjetoModel::create($request->all());
@@ -52,9 +51,11 @@ class ProjetoController extends Controller
      * Display the specified resource.
      */
     public function show(ProjetoModel $projeto)
-    {
-        return Inertia::render('Projetos/show', ['projeto' => $projeto->load('tarefas.usuarios')] );
-    }
+{
+    return Inertia::render('Projetos/Show', [
+        'projeto' => $projeto->load('tasks')
+    ]);
+}
 
 
 
@@ -77,7 +78,6 @@ class ProjetoController extends Controller
             'nome' => 'required|string|max:255',
             'descricao' => 'nullable|string',
             'dt_entrega' => 'date|nullable',
-            'qtd_task' => 'string',
         ]);
 
         $projeto->update($request->all());

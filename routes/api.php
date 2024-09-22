@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProjetoController;
+use App\Models\ProjetoModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::get('/projetos/list', [ProjetoController::class, 'apiIndex'])->name('api.projetos.index');
-// api.php
-
-
+Route::get('/projetos/{projeto}/tasks', function (ProjetoModel $projeto) {
+    return response()->json($projeto->tasks);
+});
