@@ -14,14 +14,19 @@ class ProjetoController extends Controller
     public function index()
     {
         $projetos = ProjetoModel::all();
-        return Inertia::render('Projetos/Projeto', ['projetos' => $projetos]);// ['projetos' => $projetos]
+        return Inertia::render('Projetos/Projeto', ['projetos' => $projetos]); // ['projetos' => $projetos]
     }
 
     public function apiIndex()
-{
-    return response()->json(ProjetoModel::all());
-    
-}
+    {
+        return response()->json(ProjetoModel::all());
+    }
+
+    public function getTasks($projetoId)
+    {
+        $projeto = ProjetoModel::with('tasks')->findOrFail($projetoId);
+        return response()->json($projetoId->tasks);
+    }
 
     /**
      * Show the form for creating a new resource.
@@ -51,11 +56,11 @@ class ProjetoController extends Controller
      * Display the specified resource.
      */
     public function show(ProjetoModel $projeto)
-{
-    return Inertia::render('Projetos/Show', [
-        'projeto' => $projeto->load('tasks')
-    ]);
-}
+    {
+        return Inertia::render('Projetos/Show', [
+            'projeto' => $projeto->load('tasks')
+        ]);
+    }
 
 
 

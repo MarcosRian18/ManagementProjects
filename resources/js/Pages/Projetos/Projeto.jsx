@@ -39,7 +39,7 @@ export default function Projetos({ auth }) {
         try {
             const response = await axios.get(`/api/projetos/${projetoId}/tasks`);
             console.log("Tarefas carregadas:", response.data);
-            setTasks(response.data);
+            setTasks(response.data);  
         } catch (error) {
             console.error("Erro ao carregar tarefas:", error);
         }

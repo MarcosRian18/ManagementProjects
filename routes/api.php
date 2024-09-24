@@ -24,3 +24,5 @@ Route::get('/projetos/list', [ProjetoController::class, 'apiIndex'])->name('api.
 Route::get('/projetos/{projeto}/tasks', function (ProjetoModel $projeto) {
     return response()->json($projeto->tasks);
 });
+
+Route::get('/projetos/{id}/tasks', [ProjetoController::class, 'getTasks']);

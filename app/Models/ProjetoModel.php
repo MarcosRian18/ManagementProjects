@@ -16,6 +16,6 @@ class ProjetoModel extends Model
 
     public function tasks(): HasMany
     {
-        return $this->hasMany(TaskModel::class);
+        return $this->hasMany(TaskModel::class, 'projeto_id');
     }
 }
